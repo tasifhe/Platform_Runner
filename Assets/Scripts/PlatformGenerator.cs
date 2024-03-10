@@ -1,74 +1,67 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 public class PlatformGenerator : MonoBehaviour
 {
-    public GameObject objectToSpawn; // The prefab to spawn
-    public int initialSpawnCount = 5; // The number of initial clones to create
+    public GameObject[] prefabsToSpawn; // Array of prefabs to spawn
+    public int spawnCount = 5; // The number of clones to create
     public float spawnDistance = 500f; // The distance between each clone
+    public PlayerController playerController; // Reference to the PlayerController script
     public float activationDistance = 500f; // Distance at which the objects should be activated
 
-    private PlayerController playerController; // Reference to the PlayerController instance
-    public Transform playerTransform; // Reference to the player's transform
-
-    private List<GameObject> spawnedObjects; // List to store the spawned objects
-    private int currentIndex = 0; // Index of the current object
+    private GameObject[] spawnedObjects; // Array to store the spawned objects
+    private int currentIndex = 0; // Current index in the spawnedObjects array
 
     private void Start()
     {
-        playerController = FindObjectOfType<PlayerController>(); // Find the PlayerController instance in the scene
-        spawnedObjects = new List<GameObject>(); // Initialize the list
+        spawnedObjects = new GameObject[spawnCount]; // Initialize the array
         SpawnObjects();
     }
 
     private void SpawnObjects()
     {
-        for (int i = 0; i < initialSpawnCount; i++)
+        for (int i = 0; i < spawnCount; i++)
         {
+            int prefabIndex = Random.Range(0, prefabsToSpawn.Length);
+            GameObject prefab = prefabsToSpawn[prefabIndex];
+
             Vector3 spawnPosition = transform.position + transform.forward * (i * spawnDistance);
 
             // Spawn the object
-            GameObject spawnedObject = Instantiate(objectToSpawn, spawnPosition, Quaternion.identity);
+            spawnedObjects[i] = Instantiate(prefab, spawnPosition, Quaternion.identity);
 
             // Parent the spawned object to this SpawnManager
-            spawnedObject.transform.parent = transform;
+            spawnedObjects[i].transform.parent = transform;
 
             // Disable the spawned object initially
-            spawnedObject.SetActive(false);
-
-            // Add the spawned object to the list
-            spawnedObjects.Add(spawnedObject);
+            spawnedObjects[i].SetActive(false);
         }
     }
 
     private void Update()
     {
-        if (playerController != null && playerTransform == null)
+        if (playerController == null)
         {
-            playerTransform = playerController.transform;
+            playerController = FindObjectOfType<PlayerController>();
         }
 
-        // Check if the player is close to the current spawned object
-        if (currentIndex < spawnedObjects.Count && playerTransform != null && Vector3.Distance(playerTransform.position, spawnedObjects[currentIndex].transform.position) <= activationDistance)
+        if (playerController != null)
         {
-            // Enable the current spawned object if it is within the activation distance
-            spawnedObjects[currentIndex].SetActive(true);
-            currentIndex++;
-        }
+            Transform playerTransform = playerController.transform;
 
-        // Check if all objects have been activated
-        if (currentIndex >= spawnedObjects.Count)
-        {
-            // Generate a new object and add it to the list
-            Vector3 spawnPosition = spawnedObjects[spawnedObjects.Count - 1].transform.position + transform.forward * spawnDistance;
-            GameObject newObject = Instantiate(objectToSpawn, spawnPosition, Quaternion.identity);
-            newObject.transform.parent = transform;
-            spawnedObjects.Add(newObject);
-
-            // Disable the new object initially
-            newObject.SetActive(false);
-
-            currentIndex = spawnedObjects.Count - 1;
+            // Check the distance between the player and the current spawned object
+            if (currentIndex < spawnedObjects.Length)
+            {
+                if (Vector3.Distance(playerTransform.position, spawnedObjects[currentIndex].transform.position) <= activationDistance)
+                {
+                    // Enable the current spawned object if it is within the activation distance
+                    spawnedObjects[currentIndex].SetActive(true);
+                    currentIndex++;
+                }
+            }
+            else
+            {
+                currentIndex = 0; // Reset the index if we've reached the end of the spawnedObjects array
+            }
         }
     }
 }
